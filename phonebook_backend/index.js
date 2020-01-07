@@ -4,7 +4,7 @@ const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const cors = require('cors')
 
-app.use(cors)
+app.use(cors())
 app.use(bodyParser.json())
 morgan.token('content', (req, res) => {
   return JSON.stringify(req.body)
@@ -77,13 +77,25 @@ app.post('/api/persons', (req, res) => {
     id: generateId(),
   }
   persons = persons.concat(person)
-  res.json(person)
+  res.status(201).json(person)
 })
 
 app.delete('/api/persons/:id', (req, res) => {
   const id = Number(req.params.id)
   persons = persons.filter(n => n.id !== id)
   res.status(204).end()
+})
+
+app.put('/api/persons/:id', (req, res) => {
+  const id = Number(req.params.id)
+  const person = persons.find(n => n.id === id)
+  const changePerson = {
+    ...person,
+    name: req.body.name,
+    number: req.body.number,
+  }
+  persons = persons.map(n => (n.id === id ? changePerson : n))
+  res.status(200).json(changePerson)
 })
 
 const PORT = process.env.PORT || 3001
