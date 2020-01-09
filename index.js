@@ -50,6 +50,10 @@ app.get('/api/persons/:id', (req, res) => {
   }
 })
 
+app.get('/', (req, res) => {
+  res.send('<h1>Hey World!</h1>')
+})
+
 app.get('/info', (req, res) => {
   const NumberOfPersons = persons.length
   const content = `<p>Phonebook has info for ${NumberOfPersons} people</p><p>${new Date()}</p>`
