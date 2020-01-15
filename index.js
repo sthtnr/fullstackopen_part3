@@ -1,8 +1,10 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
 const cors = require('cors')
 app.use(express.static('build'))
+const Person = require('./models/person')
 
 app.use(cors())
 app.use(bodyParser.json())
@@ -29,31 +31,73 @@ let persons = [
   },
 ]
 
-app.get('/api/persons', (req, res) => res.json(persons))
+// mongoDB化 完了
+app.get('/api/persons', (req, res) => {
+  Person.find({}).then(persons => {
+    res.json(persons.map(person => person.toJSON()))
+  })
+})
 
+// mongoDB化 完了?
+// :idが見つからなかった時の処理書いてないけどいいのかこれ？=>お手本が書いてないからいいよ
 app.get('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  const person = persons.find(n => n.id === id)
-  if (person) {
-    res.json(person)
-  } else {
-    res.status(404).end()
-  }
+  const person = Person.findById(req.params.id).then(person => {
+    res.json(person.toJSON())
+  })
 })
 
-app.get('/', (req, res) => {
-  res.send('<h1>Hey World!</h1>')
-})
+// app.get('/api/persons/:id', (req, res) => {
+//   const id = Number(req.params.id)
+//   const person = persons.find(n => n.id === id)
+//   if (person) {
+//     res.json(person)
+//   } else {
+//     res.status(404).end()
+//   }
+// })
 
+// app.get('/', (req, res) => {
+//   res.send('<h1>Hey World!</h1>')
+// })
+
+// app.get('/info', (req, res) => {
+//   const NumberOfPersons = persons.length
+//   const content = `<p>Phonebook has info for ${NumberOfPersons} people</p><p>${new Date()}</p>`
+//   res.send(content)
+// })
+
+// mongoDB化 完了?
 app.get('/info', (req, res) => {
-  const NumberOfPersons = persons.length
+  const NumberOfPersons = Person.length
   const content = `<p>Phonebook has info for ${NumberOfPersons} people</p><p>${new Date()}</p>`
   res.send(content)
 })
 
-const getRandomInt = max => Math.floor(Math.random() * Math.floor(max))
-const generateId = () => getRandomInt(2 ** 50)
+// const getRandomInt = max => Math.floor(Math.random() * Math.floor(max))
+// const generateId = () => getRandomInt(2 ** 50)
 
+// app.post('/api/persons', (req, res) => {
+//   const body = req.body
+
+//   if (!body.name || !body.number) {
+//     return res.status(404).json({ error: 'name or number is missing' })
+//   }
+
+//   const ExistSameName = obj => obj.name === body.name
+//   if (persons.some(ExistSameName)) {
+//     return res.status(404).json({ error: 'name must be unique' })
+//   }
+
+//   const person = {
+//     name: body.name,
+//     number: body.number,
+//     id: generateId(),
+//   }
+//   persons = persons.concat(person)
+//   res.status(201).json(person)
+// })
+
+// mongoDB化 完了
 app.post('/api/persons', (req, res) => {
   const body = req.body
 
@@ -66,13 +110,15 @@ app.post('/api/persons', (req, res) => {
     return res.status(404).json({ error: 'name must be unique' })
   }
 
-  const person = {
+  const person = new Person({
     name: body.name,
     number: body.number,
-    id: generateId(),
-  }
-  persons = persons.concat(person)
-  res.status(201).json(person)
+  })
+  // persons = persons.concat(person)
+  // res.status(201).json(person)
+  person.save().then(savedPerson => {
+    res.json(savedPerson.toJSON())
+  })
 })
 
 app.delete('/api/persons/:id', (req, res) => {
