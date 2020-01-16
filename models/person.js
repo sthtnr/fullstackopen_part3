@@ -2,8 +2,10 @@ require('dotenv').config()
 const mongoose = require('mongoose')
 
 const url = process.env.MONGODB_URI
+const envCheck = process.env
 
 console.log('connecting to', url)
+console.log('envCheckの値は………', envCheck)
 
 mongoose
   .connect(url, { useNewUrlParser: true })
