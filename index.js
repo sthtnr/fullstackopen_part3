@@ -31,73 +31,31 @@ let persons = [
   },
 ]
 
-// mongoDB化 完了
 app.get('/api/persons', (req, res) => {
   Person.find({}).then(persons => {
     res.json(persons.map(person => person.toJSON()))
   })
 })
 
-// mongoDB化 完了?
-// :idが見つからなかった時の処理書いてないけどいいのかこれ？=>お手本が書いてないからいいよ
-app.get('/api/persons/:id', (req, res) => {
-  const person = Person.findById(req.params.id).then(person => {
-    res.json(person.toJSON())
+app.get('/api/persons/:id', (req, res, next) => {
+  Person.findById(req.params.id)
+    .then(person => {
+      if (person) {
+        res.json(person.toJSON())
+      } else {
+        res.status(204).end()
+      }
+    })
+    .catch(err => next(err))
+})
+
+app.get('/info', (req, res) => {
+  Person.countDocuments({}).then(numDocs => {
+    const content = `<p>Phonebook has info for ${numDocs} people</p><p>${new Date()}</p>`
+    res.send(content)
   })
 })
 
-// app.get('/api/persons/:id', (req, res) => {
-//   const id = Number(req.params.id)
-//   const person = persons.find(n => n.id === id)
-//   if (person) {
-//     res.json(person)
-//   } else {
-//     res.status(404).end()
-//   }
-// })
-
-// app.get('/', (req, res) => {
-//   res.send('<h1>Hey World!</h1>')
-// })
-
-// app.get('/info', (req, res) => {
-//   const NumberOfPersons = persons.length
-//   const content = `<p>Phonebook has info for ${NumberOfPersons} people</p><p>${new Date()}</p>`
-//   res.send(content)
-// })
-
-// mongoDB化 完了?
-app.get('/info', (req, res) => {
-  const NumberOfPersons = Person.length
-  const content = `<p>Phonebook has info for ${NumberOfPersons} people</p><p>${new Date()}</p>`
-  res.send(content)
-})
-
-// const getRandomInt = max => Math.floor(Math.random() * Math.floor(max))
-// const generateId = () => getRandomInt(2 ** 50)
-
-// app.post('/api/persons', (req, res) => {
-//   const body = req.body
-
-//   if (!body.name || !body.number) {
-//     return res.status(404).json({ error: 'name or number is missing' })
-//   }
-
-//   const ExistSameName = obj => obj.name === body.name
-//   if (persons.some(ExistSameName)) {
-//     return res.status(404).json({ error: 'name must be unique' })
-//   }
-
-//   const person = {
-//     name: body.name,
-//     number: body.number,
-//     id: generateId(),
-//   }
-//   persons = persons.concat(person)
-//   res.status(201).json(person)
-// })
-
-// mongoDB化 完了
 app.post('/api/persons', (req, res) => {
   const body = req.body
 
@@ -114,30 +72,49 @@ app.post('/api/persons', (req, res) => {
     name: body.name,
     number: body.number,
   })
-  // persons = persons.concat(person)
-  // res.status(201).json(person)
   person.save().then(savedPerson => {
     res.json(savedPerson.toJSON())
   })
 })
 
 app.delete('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  persons = persons.filter(n => n.id !== id)
-  res.status(204).end()
+  Person.findByIdAndRemove(req.params.id)
+    .then(result => {
+      res.status(204).end()
+    })
+    .catch(error => next(error))
 })
 
-app.put('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  const person = persons.find(n => n.id === id)
-  const changePerson = {
-    ...person,
+app.put('/api/persons/:id', (req, res, next) => {
+  const person = {
     name: req.body.name,
     number: req.body.number,
   }
-  persons = persons.map(n => (n.id === id ? changePerson : n))
-  res.status(200).json(changePerson)
+
+  Person.findByIdAndUpdate(req.params.id, person, { new: true })
+    .then(updatedPerson => {
+      res.json(updatedPerson.toJSON())
+    })
+    .catch(err => next(err))
 })
 
-const PORT = process.env.PORT || 3001
+const unknownEndpoint = (req, res) => {
+  res.status(404).send({ error: 'unknown endpoint' })
+}
+
+app.use(unknownEndpoint)
+
+const errorHandler = (err, req, res, next) => {
+  console.error(err.message)
+
+  if (err.name === 'CastError' && err.kind == 'ObjectId') {
+    return res.status(400).send({ error: 'malformatted id' })
+  }
+
+  next(err)
+}
+
+app.use(errorHandler)
+
+const PORT = process.env.PORT
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
